@@ -1,0 +1,8 @@
+kaggle
+pandas
+numpy
+xgboost
+scikit-learn
+matplotlib
+joblib
+faker
