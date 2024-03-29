@@ -7,6 +7,25 @@ import pandas as pd
 import pathlib
 import requests
 
+import tempfile
+import os
+import mysql.connector
+from dotenv import load_dotenv
+import os
+
+# Load the .env file
+load_dotenv()
+
+# Fetch the database configuration from the .env file
+db = mysql.connector.connect(
+    host=os.getenv("DB_HOST"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    database=os.getenv("DB_DATABASE")
+)
+
+cursor = db.cursor()
+
 app = FastAPI()
 
 temp = pathlib.PosixPath
@@ -53,6 +72,47 @@ async def predict(image: UploadFile):
     counts_str = ', '.join(f'{v} {k}' for k, v in counts.items())
 
     return {"results": counts_str}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "UP"}
+
+@app.post("/predict_saving")
+async def predict(image: UploadFile):
+    # Read the image file
+    image_bytes = await image.read()
+    image_array = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+
+    # Save the image file to a temporary directory
+    temp_dir = tempfile.gettempdir()
+    file_path = os.path.join(temp_dir, image.filename)
+    with open(file_path, 'wb') as f:
+        f.write(image_bytes)
+
+    # Inference
+    results = model([img], size=416)
+
+    # Get pandas DataFrame of results
+    results_df = results.pandas().xyxy[0]
+
+    # Count occurrences of each class name
+    counts = results_df['name'].value_counts().to_dict()
+
+    # Convert counts to string
+    counts_str = ', '.join(f'{v} {k}' for k, v in counts.items())
+
+    # Store the file path and the prediction output in the MySQL database
+    sql = "INSERT INTO adludio (filepath, prediction) VALUES (%s, %s)"
+    val = (file_path, counts_str)
+    cursor.execute(sql, val)
+    db.commit()
+
+    return {"results": counts_str}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "UP"}
 
 # Run the FastAPI application locally
 if __name__ == "__main__":

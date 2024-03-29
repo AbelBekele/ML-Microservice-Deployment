@@ -3,3 +3,5 @@ uvicorn
 python-multipart
 torch
 natsort
+mysql-connector-python
+python-dotenv
