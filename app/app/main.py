@@ -5,14 +5,30 @@ import numpy as np
 import torch
 import pandas as pd
 import pathlib
+import requests
 
 app = FastAPI()
 
 temp = pathlib.PosixPath
 pathlib.PosixPath = pathlib.WindowsPath
 
-model = torch.hub.load('ultralytics/yolov5', 'custom', './yolov5/runs/train/exp4/weights/best.pt',  _verbose=False)  # custom trained model
+# URL of the model
+url = "https://github.com/AbelBekele/ML-Microservice-Deployment/raw/main/model/best.pt"
+
+# Send HTTP request to the URL
+response = requests.get(url, allow_redirects=True)
+
+# Ensure the models directory exists
+pathlib.Path('./models').mkdir(parents=True, exist_ok=True)
+
+# Write the content of the response to a file in the models directory
+with open('./models/best.pt', 'wb') as file:
+    file.write(response.content)
+
+# Now you can load the model from the models directory
+model = torch.hub.load('ultralytics/yolov5', 'custom', './models/best.pt', _verbose=False)  # custom trained model
 model.conf = 0.7  # NMS confidence threshold
+
 
 class ImageType(UploadFile):
     data: bytes
@@ -37,3 +53,8 @@ async def predict(image: UploadFile):
     counts_str = ', '.join(f'{v} {k}' for k, v in counts.items())
 
     return {"results": counts_str}
+
+# Run the FastAPI application locally
+if __name__ == "__main__":
+ import uvicorn
+ uvicorn.run(app, host="0.0.0.0", port=8000)
