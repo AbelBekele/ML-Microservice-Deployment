@@ -12,11 +12,27 @@ import os
 import mysql.connector
 from dotenv import load_dotenv
 import os
+import logging
 
-# Load the .env file
+# Configure logging
+logging.basicConfig(filename='myapp.log', level=logging.INFO)  # Main log file
+
+logger = logging.getLogger(__name__)  # Default logger
+
+db_logger = logging.getLogger("database")  # Separate logger for database
+db_logger.setLevel(logging.DEBUG)  # More detailed database logging
+
+requests_logger = logging.getLogger("requests")  # Logger for HTTP requests
+requests_logger.setLevel(logging.INFO)  # Track requests and responses
+
+model_logger = logging.getLogger("model")  # Logger for model-related events
+model_logger.setLevel(logging.WARNING)  # Less verbose model logging
+
+
+# Load environment variables
 load_dotenv()
 
-# Fetch the database configuration from the .env file
+# Database connection
 db = mysql.connector.connect(
     host=os.getenv("DB_HOST"),
     user=os.getenv("DB_USER"),
@@ -31,84 +47,80 @@ app = FastAPI()
 temp = pathlib.PosixPath
 pathlib.PosixPath = pathlib.WindowsPath
 
-# URL of the model
+# Model URL and download logic
 url = "https://github.com/AbelBekele/ML-Microservice-Deployment/raw/main/model/best.pt"
 
-# Send HTTP request to the URL
-response = requests.get(url, allow_redirects=True)
+def download_model():
+    model_path = './models/best.pt'
+    if not os.path.exists(model_path):
+        try:
+            response = requests.get(url, allow_redirects=True)
+            response.raise_for_status()  # Raise error for non-2xx status codes
 
-# Ensure the models directory exists
-pathlib.Path('./models').mkdir(parents=True, exist_ok=True)
+            pathlib.Path('./models').mkdir(parents=True, exist_ok=True)
 
-# Write the content of the response to a file in the models directory
-with open('./models/best.pt', 'wb') as file:
-    file.write(response.content)
+            with open(model_path, 'wb') as file:
+                file.write(response.content)
 
-# Now you can load the model from the models directory
-model = torch.hub.load('ultralytics/yolov5', 'custom', './models/best.pt', _verbose=False)  # custom trained model
-model.conf = 0.7  # NMS confidence threshold
+            requests_logger.info(f"Model downloaded successfully to: {model_path}")
+        except requests.exceptions.RequestException as e:
+            requests_logger.error(f"Failed to download model: {e}")
+            raise Exception("Failed to download model")
 
+# Load the model (can be called within a dependency or function)
+def load_model():
+    try:
+        model = torch.hub.load('ultralytics/yolov5', 'custom', './models/best.pt', _verbose=False)
+        model.conf = 0.7  # NMS confidence threshold
+        model_logger.info(f"Model loaded successfully from path: ./models/best.pt")
+        return model
+    except Exception as e:
+        model_logger.error(f"Failed to load model: {e}")
+        raise Exception("Failed to load model")
 
+# Class for image data type
 class ImageType(UploadFile):
     data: bytes
-    
+
+
 @app.post("/predict")
 async def predict(image: UploadFile):
-    # Read the image file
-    image_bytes = await image.read()
-    image_array = np.frombuffer(image_bytes, np.uint8)
-    img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+    """
+    Predicts objects in an uploaded image.
 
-    # Inference
-    results = model([img], size=416)
+    Raises:
+        Exception: If model download or loading fails.
+    """
 
-    # Get pandas DataFrame of results
-    results_df = results.pandas().xyxy[0]
+    try:
+        # Download model if it doesn't exist
+        download_model()
 
-    # Count occurrences of each class name
-    counts = results_df['name'].value_counts().to_dict()
+        # Load the model
+        model = load_model()
 
-    # Convert counts to string
-    counts_str = ', '.join(f'{v} {k}' for k, v in counts.items())
+        # Read the image file
+        image_bytes = await image.read()
+        image_array = np.frombuffer(image_bytes, np.uint8)
+        img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
 
-    return {"results": counts_str}
+        # Inference
+        results = model([img], size=416)
 
-@app.get("/health")
-async def health_check():
-    return {"status": "UP"}
+        # Get pandas DataFrame of results
+        results_df = results.pandas().xyxy[0]
 
-@app.post("/predict_saving")
-async def predict(image: UploadFile):
-    # Read the image file
-    image_bytes = await image.read()
-    image_array = np.frombuffer(image_bytes, np.uint8)
-    img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+        # Count occurrences of each class name
+        counts = results_df['name'].value_counts().to_dict()
 
-    # Save the image file to a temporary directory
-    temp_dir = tempfile.gettempdir()
-    file_path = os.path.join(temp_dir, image.filename)
-    with open(file_path, 'wb') as f:
-        f.write(image_bytes)
+        # Convert counts to string
+        counts_str = ', '.join(f'{v} {k}' for k, v in counts.items())
 
-    # Inference
-    results = model([img], size=416)
+        return {"results": counts_str}
+    except Exception as e:
+        logger.error(f"Error during prediction: {e}")
+        return {"error": str(e)}
 
-    # Get pandas DataFrame of results
-    results_df = results.pandas().xyxy[0]
-
-    # Count occurrences of each class name
-    counts = results_df['name'].value_counts().to_dict()
-
-    # Convert counts to string
-    counts_str = ', '.join(f'{v} {k}' for k, v in counts.items())
-
-    # Store the file path and the prediction output in the MySQL database
-    sql = "INSERT INTO adludio (filepath, prediction) VALUES (%s, %s)"
-    val = (file_path, counts_str)
-    cursor.execute(sql, val)
-    db.commit()
-
-    return {"results": counts_str}
 
 @app.get("/health")
 async def health_check():
