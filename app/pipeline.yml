@@ -1,0 +1,10 @@
+---
+- name: create pipeline
+  hosts: localhost
+  gather_facts: false
+   
+  roles:
+    - codecommit
+    - containerregistry
+    - codebuild
+    - codepipeline
