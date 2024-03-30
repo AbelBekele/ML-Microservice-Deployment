@@ -1,0 +1,31 @@
+# Train/val/test sets as 1) dir: path/to/imgs, 2) file: path/to/imgs.txt, or 3) list: [path/to/imgs1, path/to/imgs2, ..]
+path: ../datasets # dataset root dir
+train: ./train # train images (relative to 'path') 128 images
+val: ./val # val images (relative to 'path') 128 images
+test: # test images (optional)
+
+# Classes (80 COCO classes)
+names:
+  0: Background Image
+  1: Logo
+  2: Call-To-Action (CTA) Button
+  3: Icon
+  4: Product Image
+  5: Text Elements
+  6: Infographic
+  7: Banner
+  8: Illustration
+  9: Photograph
+  10: Mascot
+  11: Testimonial Quotes
+  12: Social Proof
+  13: Seal or Badge
+  14: Graphs and Charts
+  15: Decorative Elements
+  16: Interactive Elements
+  17: Animation Frames
+  18: Coupon or Offer Code
+  19: Legal Disclaimers or Terms
+  20: Contact Information
+  21: Map or Location Image
+  22: QR Code
