@@ -5,3 +5,4 @@ torch
 natsort
 mysql-connector-python
 python-dotenv
+psycopg2-binary

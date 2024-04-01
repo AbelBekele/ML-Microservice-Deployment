@@ -1,22 +1,46 @@
 {
-    "family": "adludio-challenge-task-definition",
-    "networkMode": "bridge",
-    "containerDefinitions": [
+  "family": "adludio-challenge-task-definition",
+  "networkMode": "bridge",
+  "containerDefinitions": [
       {
-        "name": "adludio-challenge-container",
-        "image": "489880714178.dkr.ecr.eu-west-1.amazonaws.com/adludio_challange-yolov5:version1",
-        "essential": true,
-        "portMappings": [
-          {
-            "containerPort": 8000,
-            "hostPort": 8000
-          }
-        ],
-        "memory": 4000,
-        "cpu": 4
+          "name": "adludio-challenge-container",
+          "image": "489880714178.dkr.ecr.eu-west-1.amazonaws.com/automation_challenge:latest",
+          "essential": true,
+          "portMappings": [
+              {
+                  "containerPort": 8000,
+                  "hostPort": 8000
+              }
+          ],
+          "memory": 4000,
+          "cpu": 4,
+          "environment": [
+              {
+                  "name": "DB_HOST",
+                  "value": "dpg-co59nrf79t8c739nm47g-a.oregon-postgres.render.com"
+              },
+              {
+                  "name": "DB_USER",
+                  "value": "abel"
+              },
+              {
+                  "name": "DB_PASSWORD",
+                  "value": "zU16KVFPNUqOA4oYOLNAeZUY23a3N4gx"
+              },
+              {
+                  "name": "DB_DATABASE",
+                  "value": "adludio_challenge"
+              },
+              {
+                  "name": "DB_PORT",
+                  "value": "5432"
+              }
+          ]
       }
-    ],
-    "requiresCompatibilities": [
+  ],
+  "requiresCompatibilities": [
       "EC2"
-    ]
-  }
+  ],
+  "executionRoleArn": "arn:aws:iam::489880714178:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::489880714178:role/ecsTaskRole"
+}

@@ -1,0 +1,12 @@
+version: '3.1'
+services:
+  your_service:
+    image: adludio_challenge
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: dpg-co59nrf79t8c739nm47g-a.oregon-postgres.render.com
+      DB_USER: abel
+      DB_PASSWORD: 
+      DB_DATABASE: 
+      DB_PORT: 5432

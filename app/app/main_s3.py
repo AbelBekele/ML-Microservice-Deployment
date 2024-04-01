@@ -14,6 +14,7 @@ import mysql.connector
 from dotenv import load_dotenv
 import os
 import logging
+import boto3
 
 # Configure logging
 logging.basicConfig(filename='myapp.log', level=logging.INFO)  # Main log file
@@ -46,26 +47,30 @@ cursor = db.cursor()
 
 app = FastAPI()
 
-temp = pathlib.PosixPath
-pathlib.PosixPath = pathlib.WindowsPath
+# temp = pathlib.PosixPath
+# pathlib.PosixPath = pathlib.WindowsPath
 
-# Model URL and download logic
-url = "https://github.com/AbelBekele/ML-Microservice-Deployment/raw/main/model/best.pt"
+import boto3
+
+s3 = boto3.client('s3')
+
+bucket_name = os.getenv("BUCKET_NAME")
+object_name = os.getenv("OBJECT_NAME")
+
+s3.download_file(bucket_name, object_name, './models/best.pt')
+
+# # Model URL and download logic
+# url = "https://github.com/AbelBekele/ML-Microservice-Deployment/raw/main/model/best.pt"
+
 
 def download_model():
     model_path = './models/best.pt'
     if not os.path.exists(model_path):
         try:
-            response = requests.get(url, allow_redirects=True)
-            response.raise_for_status()  # Raise error for non-2xx status codes
-
             pathlib.Path('./models').mkdir(parents=True, exist_ok=True)
-
-            with open(model_path, 'wb') as file:
-                file.write(response.content)
-
+            s3.download_file(bucket_name, object_name, model_path)
             requests_logger.info(f"Model downloaded successfully to: {model_path}")
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             requests_logger.error(f"Failed to download model: {e}")
             raise Exception("Failed to download model")
 
