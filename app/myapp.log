@@ -1,0 +1,10 @@
+ERROR:app.main:Error during prediction: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+ERROR:app.main:Error during prediction: name 'url' is not defined
+ERROR:app.main:Error during prediction: name 'url' is not defined
+INFO:requests:Model downloaded successfully to: ./models/best.pt

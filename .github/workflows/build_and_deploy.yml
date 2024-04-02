@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build and Deploy
 
 on:
   push:
@@ -64,15 +64,12 @@ jobs:
 
     - name: Fill in the new image ID in the ECS task definition
       id: task-def
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
-      with:
-        task-definition: task-definition.json
-        container-name: abellb/adludio_challange-yolov5
-        image: ${{ steps.build-image.outputs.image }}
+      run: |
+        sed -i "s|<IMAGE>|${{ steps.build-image.outputs.image }}|" task-definition.json
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
-        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        task-definition: task-definition.json
         service: automation_challenge
-        cluster: automation-challenge
+        cluster: adludio-challenge-cluster

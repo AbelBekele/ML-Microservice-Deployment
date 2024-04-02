@@ -10,3 +10,6 @@ services:
       DB_PASSWORD: 
       DB_DATABASE: 
       DB_PORT: 5432
+      BUCKET_NAME: adludio-challenge
+      OBJECT_NAME: models/best.pt
+      
